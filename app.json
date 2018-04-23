@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "CSCI 4950 Image Recognition",
+    "description": "Image Recognition Processer - App Side",
+    "slug": "csci-4950-project",
+    "sdkVersion": "26.0.0",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "primaryColor": "#cccccc",
+    "packagerOpts": {
+      "assetExts": ["ttf", "mp4"]
+    },
+    "ios": {
+      "supportsTablet": true
+    }
+  }
+}
