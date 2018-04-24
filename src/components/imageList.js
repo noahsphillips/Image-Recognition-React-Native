@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
-import Image from './image'
+import {ListItem} from 'react-native-elements'
+import RecognizedImage from './recognizedImage'
 
 class ImageList extends Component {
 
@@ -8,29 +9,27 @@ class ImageList extends Component {
     return (
       <View>
         <View style={styles.container}>
-        <FlatList
-          data={[
-            {key: 'Devin'},
-            {key: 'Jackson'},
-            {key: 'James'},
-            {key: 'Joel'},
-            {key: 'John'},
-            {key: 'Jillian'},
-            {key: 'Jimmy'},
-            {key: 'Julie'},
-          ]}
-          renderItem={({item}) => <Image name={item.key} />}
-        />
-      </View>
+          <FlatList
+            data={this.props.data}
+            keyExtractor={(item, index) => index}
+            renderItem={({ item }) => <ListItem 
+            roundAvatar 
+            avatar={{uri:item.url}} 
+            title={item.all_labels.Name}
+            subtitle={`Confidence: ${item.all_labels.Confidence}`}
+            hideChevron
+          />}
+          />
+        </View>
       </View>
     );
   }
 }
 
 const styles = StyleSheet.create({
-    container: {
-     height: '100%'
-    }
-  })
+  container: {
+    height: '100%'
+  }
+})
 
 export default ImageList;

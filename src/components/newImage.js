@@ -15,8 +15,8 @@ import axios from 'axios';
 import Exponent, { Constants, ImagePicker, registerRootComponent } from 'expo';
 
 const request = axios.create({
-    baseURL: 'http://localhost:8000/photos',
-    timeout: 1000,
+    baseURL: 'https://image-recognition-node.herokuapp.com/app/photos/',
+    timeout: 10000,
     headers: {            
         'Accept': 'application/json',
         'Content-Type': 'application/json'
@@ -30,13 +30,20 @@ const request2 = axios.create({
     }
 });
 
-
-
 export default class NewImage extends React.Component {
     state = {
         image: null,
         uploading: false,
+        label: null
     };
+
+    static navigationOptions = ({navigation}) => {
+        const params = navigation.state.params || {};
+    
+        return {
+          title: 'Recognize'
+        }
+      };
 
     render() {
         let { image } = this.state;
@@ -51,6 +58,7 @@ export default class NewImage extends React.Component {
                 <Button onPress={this._takePhoto} title="Take a photo" />
 
                 {this._maybeRenderImage()}
+                {this._maybeRenderLabel()}
                 {this._maybeRenderUploadingOverlay()}
 
                 <StatusBar barStyle="default" />
@@ -73,6 +81,17 @@ export default class NewImage extends React.Component {
                     <ActivityIndicator color="#fff" animating size="large" />
                 </View>
             );
+        }
+    };
+
+    _maybeRenderLabel = () => {
+        if (this.state.label) {
+            return (
+                <View>
+                    <Text>My Guess: {this.state.label.Name}</Text>
+                    <Text>Confidence: {this.state.label.Confidence}</Text>
+                </View>
+            )
         }
     };
 
@@ -104,32 +123,18 @@ export default class NewImage extends React.Component {
                 </View>
 
                 <Text
-                    onPress={this._copyToClipboard}
-                    onLongPress={this._share}
                     style={{ paddingVertical: 10, paddingHorizontal: 10 }}>
-                    {image}
                 </Text>
             </View>
         );
     };
 
-    _share = () => {
-        Share.share({
-            message: this.state.image,
-            title: 'Check out this photo',
-            url: this.state.image,
-        });
-    };
-
-    _copyToClipboard = () => {
-        Clipboard.setString(this.state.image);
-        alert('Copied image URL to clipboard');
-    };
-
     _takePhoto = async () => {
         let pickerResult = await ImagePicker.launchCameraAsync({
             allowsEditing: true,
-            aspect: [4, 3],
+            mediaTypes: 'Images',
+            quality: 0,
+            base64: true
         });
 
         this._handleImagePicked(pickerResult);
@@ -138,7 +143,9 @@ export default class NewImage extends React.Component {
     _pickImage = async () => {
         let pickerResult = await ImagePicker.launchImageLibraryAsync({
             allowsEditing: true,
-            aspect: [4, 3],
+            mediaTypes: 'Images',
+            quality: 0,
+            base64: true
         });
 
         this._handleImagePicked(pickerResult);
@@ -151,11 +158,22 @@ export default class NewImage extends React.Component {
             this.setState({ uploading: true });
 
             if (!pickerResult.cancelled) {
-                uploadResponse = await uploadImageAsync(pickerResult.uri);
-                console.log('**** made it to here *****', uploadResponse)
-                uploadResponse = await uploadToS3(pickerResult.uri, uploadResponse.signedRequest)
-                this.setState({ image: uploadResult.location });
+                console.log(pickerResult)
+                uploadResponse = await uploadImageAsync(pickerResult.uri, pickerResult.base64);
+                if (!uploadResponse) {
+                    throw 500;
+                }
+                this.setState({ image: uploadResponse.url });
+
+                console.log(uploadResponse)
             }
+
+            var labels = await recognizeImage(uploadResponse.fileName, uploadResponse.url)
+
+            this.setState({label: labels})
+
+            this.props.navigation.state.params.refresh()
+
         } catch (e) {
             console.log({ uploadResponse });
             console.log({ uploadResult });
@@ -167,47 +185,34 @@ export default class NewImage extends React.Component {
     };
 }
 
-async function uploadImageAsync(uri) {
+async function uploadImageAsync(uri, base64) {
     return new Promise(async (res, rej) => {
-        let apiUrl = 'http://localhost:8000/app/sign';
 
         let uriParts = uri.split('.');
         let fileType = uriParts[uriParts.length - 1];
     
-        var response = await request.post('/app/sign', {
+        var response = await request.post('/sign', {
             fileName: `photo.${fileType}`,
-            fileType: `image/${fileType}`
+            fileType: `image/${fileType}`,
+            base64: `data:image/jpeg;base64,${base64}`
         })
 
         return res(response.data)
     })
 }
 
-async function uploadToS3(uri, signedRequest) {
+async function recognizeImage(fileName, url) {
     return new Promise(async (res, rej) => {
-        console.log('made it into function', uri)
-        console.log('made it into function', signedRequest)
-        let uriParts = uri.split('.');
-        let fileType = uriParts[uriParts.length - 1];
-    
-        let formData = new FormData();
-        formData.append('photo', {
-            uri,
-            name: `photo.${fileType}`,
-            type: `image/${fileType}`,
-        });
+        console.log(fileName)
+        console.log(url)
+        var response = await request.post('/recognize', {
+            fileName,
+            url
+        })
 
-        console.log(formData)
+        console.log('***',response)
 
-        request2.put(signedRequest,formData,{
-            headers: {
-                'Content-Type': fileType
-            }
-        }).then((response) => {
-            console.log(response)
-        }).catch(err => {
-            console.log('error',err)
-        });
-    });
-  
-  }
+        return res(response.data.upload.all_labels)
+
+    })
+}

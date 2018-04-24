@@ -23,7 +23,7 @@ class Main extends Component {
     const params = navigation.state.params || {};
 
     return {
-      title: 'Upload an Image',
+      title: 'Past Uploads',
       headerRight: (
         <Button
           onPress={params.goToNewImage}
