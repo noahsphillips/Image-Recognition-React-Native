@@ -86,12 +86,19 @@ export default class NewImage extends React.Component {
 
     _maybeRenderLabel = () => {
         if (this.state.label) {
-            return (
+            if (this.state.label.Name && this.state.label.Confidence) {
+                return (
+                    <View>
+                        <Text>My Guess: {this.state.label.Name}</Text>
+                        <Text>Confidence: {this.state.label.Confidence}</Text>
+                    </View>
+                )
+            }
+            else {
                 <View>
-                    <Text>My Guess: {this.state.label.Name}</Text>
-                    <Text>Confidence: {this.state.label.Confidence}</Text>
+                    <Text>Unrecognizable</Text>
                 </View>
-            )
+            }
         }
     };
 

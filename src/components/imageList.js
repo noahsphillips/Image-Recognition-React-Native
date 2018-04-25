@@ -15,8 +15,8 @@ class ImageList extends Component {
             renderItem={({ item }) => <ListItem 
             roundAvatar 
             avatar={{uri:item.url}} 
-            title={item.all_labels.Name}
-            subtitle={`Confidence: ${item.all_labels.Confidence}`}
+            title={item.all_labels ? item.all_labels.Name : 'Unrecognized'}
+            subtitle={item.all_labels ? `Confidence: ${item.all_labels.Confidence}` : 'Unrecognized'}
             hideChevron
           />}
           />
